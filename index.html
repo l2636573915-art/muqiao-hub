@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>时间记录碎片记录表单</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main class="frame">
+      <div class="brand-bar">
+        <img class="brand-logo" src="logo.svg" alt="logo" />
+      </div>
+      <h1>时间碎片记录表单（随手记）</h1>
+
+      <form id="workForm" novalidate>
+        <div class="paired-fields">
+          <div class="field">
+            <label for="departmentRole"><span class="required">*</span>部门岗位</label>
+            <input id="departmentRole" name="departmentRole" placeholder="示例：客服1组" required />
+          </div>
+
+          <div class="field">
+            <label for="personName"><span class="required">*</span>姓名</label>
+            <input id="personName" name="personName" placeholder="示例：刘小娇" required />
+          </div>
+        </div>
+
+        <div class="field">
+          <label><span class="required">*</span>时间段</label>
+          <div class="time-range">
+            <div class="time-unit">
+              <span class="time-caption">开始时间</span>
+              <input id="startTime" name="startTime" type="time" required />
+            </div>
+            <div class="time-dash" aria-hidden="true">至</div>
+            <div class="time-unit">
+              <span class="time-caption">结束时间</span>
+              <input id="endTime" name="endTime" type="time" required />
+            </div>
+          </div>
+        </div>
+
+        <div class="paired-fields">
+          <div class="field">
+            <label for="activity"><span class="required">*</span>我在做什么</label>
+            <p class="help">简述自己在该段时间的任务，可以在预置项选择，没有的话就自己填充</p>
+            <div class="activity-picker">
+              <input id="activity" name="activity" placeholder="请选择预置任务或自己填写" required />
+              <button
+                class="preset-trigger"
+                id="activityTrigger"
+                type="button"
+                aria-label="选择预置任务"
+                aria-haspopup="dialog"
+                aria-expanded="false"
+              >
+                <span class="caret" aria-hidden="true"></span>
+              </button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="businessObject"><span class="required">*</span>业务对象</label>
+            <p class="help">预置任务会自动带出业务对象，不准确的话可以直接修改</p>
+            <input id="businessObject" name="businessObject" placeholder="请输入内容" required />
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="source"><span class="required">*</span>任务怎么来的</label>
+          <input id="source" name="source" placeholder="示例：客户企微询问/查验邮件" required />
+        </div>
+
+        <div class="field">
+          <label for="handling"><span class="required">*</span>怎么处理</label>
+          <input id="handling" name="handling" placeholder="示例：先核对信息，再处理并回复客户" required />
+        </div>
+
+        <div class="field">
+          <label for="tool"><span class="required">*</span>工具</label>
+          <input id="tool" name="tool" placeholder="示例：企微+邮箱" required />
+        </div>
+
+        <div class="field">
+          <label for="exception"><span class="required">*</span>异常</label>
+          <input id="exception" name="exception" placeholder="示例：每次价格不一样操作不一样；如无异常请填写“无”" required />
+        </div>
+
+        <div class="field">
+          <label for="waiting"><span class="required">*</span>找人/等待</label>
+          <input id="waiting" name="waiting" placeholder="示例：找头程确认信息" required />
+        </div>
+
+        <div class="field">
+          <label for="ending"><span class="required">*</span>最后怎么结束</label>
+          <input id="ending" name="ending" placeholder="示例：单据审核好后群里回复客户" required />
+        </div>
+
+        <div class="field">
+          <label for="businessFlow">业务流简要概述 <span class="help" style="display:inline; margin:0;">（可选填）</span></label>
+          <p class="help">请用简单的步骤描述这项工作从开始到结束的大致流程</p>
+          <textarea
+            id="businessFlow"
+            name="businessFlow"
+            placeholder="示例：客户提出需求 → 查询订单信息 → 核对物流状态 → 如有异常找业务确认 → 回复客户"
+          ></textarea>
+        </div>
+
+        <div class="actions">
+          <button class="secondary-action" id="addRecordBtn" type="button">添加记录</button>
+          <button type="submit">全部完成并提交</button>
+        </div>
+
+        <div class="error" id="error"></div>
+        <div class="message" id="message">已提交，表单信息已记录在当前页面。</div>
+        <section class="history" id="submittedHistory" hidden>
+          <button class="history-toggle" id="historyToggle" type="button" aria-expanded="false">
+            <span>查看记录详情</span>
+            <span class="history-count" id="historyCount">0 条</span>
+          </button>
+          <div class="history-body" id="historyBody" hidden>
+            <table class="history-table" id="historyTable"></table>
+          </div>
+        </section>
+      </form>
+    </main>
+
+    <div class="preset-backdrop" id="presetPanel" hidden>
+      <section
+        class="preset-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="presetTitle"
+      >
+        <div class="preset-head">
+          <h2 class="preset-title" id="presetTitle">选择预置任务</h2>
+          <button class="close-btn" type="button" id="closePreset" aria-label="关闭">×</button>
+        </div>
+        <div class="preset-search">
+          <input id="presetSearch" type="search" placeholder="搜索分类、对象、任务或说明" />
+        </div>
+        <div class="category-tabs" id="categoryTabs" aria-label="预置分类"></div>
+        <div class="preset-table-head" aria-hidden="true">
+          <span>业务域</span>
+          <span>业务对象</span>
+          <span>预置任务名称</span>
+        </div>
+        <div class="preset-list" id="presetList"></div>
+        <div class="preset-foot">
+          <button class="plain-btn" type="button" id="customPreset">没有合适选项，自己填写</button>
+        </div>
+      </section>
+    </div>
+
+    <script src="presets.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
