@@ -30,15 +30,16 @@
           <label><span class="required">*</span>时间段</label>
           <div class="time-range">
             <div class="time-unit">
-              <span class="time-caption">开始时间</span>
-              <input id="startTime" name="startTime" type="time" required />
+              <span class="time-caption">开始日期时间</span>
+              <input id="startTime" name="startTime" type="datetime-local" required />
             </div>
             <div class="time-dash" aria-hidden="true">至</div>
             <div class="time-unit">
-              <span class="time-caption">结束时间</span>
-              <input id="endTime" name="endTime" type="time" required />
+              <span class="time-caption">结束日期时间</span>
+              <input id="endTime" name="endTime" type="datetime-local" required />
             </div>
           </div>
+          <p class="help" style="margin-top: 8px;">请选择月-日和具体时间</p>
         </div>
 
         <div class="paired-fields">
