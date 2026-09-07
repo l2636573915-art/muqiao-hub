@@ -49,7 +49,7 @@
 
         <div class="field process-field" id="processField" hidden>
           <label for="process"><span class="required">*</span>我怎么做</label>
-          <p class="help">可以直接填写，也可以上传录音或现场录音；后续接入 AI 后，会自动转写并整理成清晰的操作步骤</p>
+          <p class="help">可以直接填写，也可以上传录音或现场录音；录音完成后会自动转写并整理成清晰的操作步骤</p>
 
           <div class="voice-panel">
             <div class="voice-actions">
@@ -61,7 +61,7 @@
                 <span class="voice-icon" aria-hidden="true">●</span>
                 <span id="recordBtnText">开始录音</span>
               </button>
-              <span class="voice-ai-tag">AI 转写待接入</span>
+              <span class="voice-ai-tag">AI 自动转写</span>
             </div>
 
             <input
@@ -107,7 +107,9 @@
         </section>
       </form>
     </main>
-<script src="presets.js"></script>
+    <script src="config.js"></script>
+    <script src="presets.js"></script>
     <script src="app.js"></script>
+    <script src="ai.js"></script>
   </body>
 </html>
