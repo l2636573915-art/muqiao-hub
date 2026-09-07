@@ -141,11 +141,18 @@ function getProfile() {
   };
 }
 
+function formatDateTime(value) {
+  if (!value) return "";
+  const [datePart, timePart = ""] = value.split("T");
+  const [, month, day] = datePart.split("-");
+  return `${month}-${day} ${timePart}`;
+}
+
 function getCurrentEntry() {
   return {
     ...getProfile(),
-    开始时间: document.querySelector("#startTime").value,
-    结束时间: document.querySelector("#endTime").value,
+    开始时间: formatDateTime(document.querySelector("#startTime").value),
+    结束时间: formatDateTime(document.querySelector("#endTime").value),
     我在做什么: activity.value.trim(),
     业务对象: document.querySelector("#businessObject").value.trim(),
     任务怎么来的: document.querySelector("#source").value.trim(),
@@ -242,7 +249,7 @@ function validateEntry() {
   const startTime = document.querySelector("#startTime");
   const endTime = document.querySelector("#endTime");
   if (startTime.value >= endTime.value) {
-    error.textContent = "结束时间需要晚于开始时间";
+    error.textContent = "结束日期时间需要晚于开始日期时间";
     endTime.focus();
     return false;
   }
