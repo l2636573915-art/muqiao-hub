@@ -1,0 +1,10 @@
+{
+  "functions": {
+    "api/transcribe.js": {
+      "maxDuration": 60
+    },
+    "api/organize.js": {
+      "maxDuration": 30
+    }
+  }
+}
