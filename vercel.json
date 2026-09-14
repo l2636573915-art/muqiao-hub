@@ -5,6 +5,9 @@
     },
     "api/organize.js": {
       "maxDuration": 30
+    },
+    "api/blob-upload.js": {
+      "maxDuration": 30
     }
   }
 }
