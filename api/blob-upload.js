@@ -1,6 +1,23 @@
-import { handleUpload } from "@vercel/blob/client";
+import { issueSignedToken } from "@vercel/blob";
+import { handleUploadPresigned } from "@vercel/blob/client";
 
 const MAX_AUDIO_BYTES = 20 * 1024 * 1024;
+const TOKEN_TTL_MS = 60 * 60 * 1000;
+const UPLOAD_URL_TTL_MS = 10 * 60 * 1000;
+const ALLOWED_CONTENT_TYPES = [
+  "audio/mpeg",
+  "audio/mp3",
+  "audio/mp4",
+  "audio/x-m4a",
+  "audio/wav",
+  "audio/x-wav",
+  "audio/webm",
+  "audio/ogg",
+  "audio/aac",
+  "video/mp4",
+  "application/octet-stream",
+];
+
 const ALLOWED_ORIGINS = new Set([
   "https://l2636573915-art.github.io",
   "http://localhost:3000",
@@ -22,6 +39,26 @@ function isAllowedOrigin(req) {
   return !origin || ALLOWED_ORIGINS.has(origin) || origin.endsWith(".vercel.app");
 }
 
+function getBlobAuthOptions() {
+  const oidcToken = process.env.VERCEL_OIDC_TOKEN;
+  const storeId = process.env.BLOB_STORE_ID;
+  const legacyToken = process.env.BLOB_READ_WRITE_TOKEN;
+
+  if (oidcToken && storeId) {
+    return { oidcToken, storeId };
+  }
+
+  if (legacyToken) {
+    return { token: legacyToken };
+  }
+
+  const error = new Error(
+    "Vercel Blob OIDC 凭证不可用。请确认 Blob 已连接到当前项目，并重新部署 Production。",
+  );
+  error.code = "BLOB_OIDC_NOT_AVAILABLE";
+  throw error;
+}
+
 export default async function handler(req, res) {
   applyCors(req, res);
 
@@ -32,50 +69,78 @@ export default async function handler(req, res) {
   try {
     const body = typeof req.body === "string" ? JSON.parse(req.body || "{}") : (req.body || {});
 
-    const jsonResponse = await handleUpload({
+    if (!process.env.BLOB_WEBHOOK_PUBLIC_KEY) {
+      const error = new Error(
+        "缺少 BLOB_WEBHOOK_PUBLIC_KEY。请确认 Blob 已连接到当前 Vercel 项目并重新部署。",
+      );
+      error.code = "BLOB_WEBHOOK_KEY_MISSING";
+      throw error;
+    }
+
+    const jsonResponse = await handleUploadPresigned({
       body,
       request: req,
-      onBeforeGenerateToken: async (pathname, clientPayload) => {
-        if (!String(pathname || "").startsWith("audio/")) {
-          throw new Error("只允许上传音频文件。请输入 audio/ 开头的路径。 ");
+      webhookPublicKey: process.env.BLOB_WEBHOOK_PUBLIC_KEY,
+      getSignedToken: async (pathname, clientPayload) => {
+        const safePathname = String(pathname || "");
+        if (!safePathname.startsWith("audio/")) {
+          const error = new Error("只允许上传 audio/ 目录下的音频文件。");
+          error.code = "INVALID_AUDIO_PATH";
+          throw error;
         }
 
-        return {
-          allowedContentTypes: [
-            "audio/mpeg",
-            "audio/mp3",
-            "audio/mp4",
-            "audio/x-m4a",
-            "audio/wav",
-            "audio/x-wav",
-            "audio/webm",
-            "audio/ogg",
-            "audio/aac",
-            "video/mp4",
-            "application/octet-stream",
-          ],
+        const authOptions = getBlobAuthOptions();
+        const token = await issueSignedToken({
+          pathname: safePathname,
+          operations: ["put"],
+          allowedContentTypes: ALLOWED_CONTENT_TYPES,
           maximumSizeInBytes: MAX_AUDIO_BYTES,
-          addRandomSuffix: true,
-          tokenPayload: String(clientPayload || "{}").slice(0, 2000),
+          validUntil: Date.now() + TOKEN_TTL_MS,
+          ...authOptions,
+        });
+
+        return {
+          token,
+          urlOptions: {
+            allowedContentTypes: ALLOWED_CONTENT_TYPES,
+            maximumSizeInBytes: MAX_AUDIO_BYTES,
+            validUntil: Date.now() + UPLOAD_URL_TTL_MS,
+            addRandomSuffix: true,
+            allowOverwrite: false,
+            tokenPayload: String(clientPayload || "{}").slice(0, 2000),
+          },
         };
-      },
-      onUploadCompleted: async ({ blob }) => {
-        console.log("audio blob upload completed", blob?.pathname || blob?.url || "unknown");
       },
     });
 
     return res.status(200).json(jsonResponse);
   } catch (err) {
     const message = String(err?.message || err || "上传授权失败");
-    console.error("blob-upload handler error", err);
+    const code = String(err?.code || "");
+    console.error("blob-upload presigned handler error", {
+      code,
+      message,
+      hasOidcToken: Boolean(process.env.VERCEL_OIDC_TOKEN),
+      hasStoreId: Boolean(process.env.BLOB_STORE_ID),
+      hasWebhookPublicKey: Boolean(process.env.BLOB_WEBHOOK_PUBLIC_KEY),
+      hasLegacyToken: Boolean(process.env.BLOB_READ_WRITE_TOKEN),
+    });
 
-    if (/BLOB|store|token|oidc/i.test(message)) {
+    if (
+      code === "BLOB_OIDC_NOT_AVAILABLE" ||
+      code === "BLOB_WEBHOOK_KEY_MISSING" ||
+      /store|token|oidc|webhook public key/i.test(message)
+    ) {
       return res.status(503).json({
-        error: "Vercel Blob 尚未连接到该项目，请先在 Vercel Storage 中创建并连接 Blob 存储。",
-        code: "BLOB_NOT_CONFIGURED",
+        error: message,
+        code: code || "BLOB_OIDC_NOT_AVAILABLE",
       });
     }
 
-    return res.status(400).json({ error: message });
+    if (code === "INVALID_AUDIO_PATH") {
+      return res.status(400).json({ error: message, code });
+    }
+
+    return res.status(400).json({ error: message, code: code || "BLOB_UPLOAD_AUTH_FAILED" });
   }
 }
