@@ -47,7 +47,7 @@
           </section>
         </div>
 
-        <div class="field process-field" id="processField" hidden>
+        <div class="field process-field" id="processField">
           <label for="process"><span class="required">*</span>我怎么做</label>
           <p class="help">可以直接填写，也可以上传录音或现场录音；单个录音不超过 20MB，录音完成后会自动转写并整理成清晰的操作步骤</p>
 
@@ -111,5 +111,15 @@
     <script src="presets.js"></script>
     <script src="app.js"></script>
     <script src="ai.js"></script>
+    <script>
+      (() => {
+        const field = document.querySelector("#processField");
+        if (!field) return;
+        field.hidden = false;
+        new MutationObserver(() => {
+          if (field.hidden) field.hidden = false;
+        }).observe(field, { attributes: true, attributeFilter: ["hidden"] });
+      })();
+    </script>
   </body>
 </html>
