@@ -54,9 +54,13 @@
   }
 
   async function uploadAudioToBlob(file, context, signal) {
-    setVoiceStatus("正在准备上传录音…", "active");
+    setVoiceStatus("正在准备安全上传录音…", "active");
 
-    const { upload } = await loadBlobClient();
+    const { uploadPresigned } = await loadBlobClient();
+    if (typeof uploadPresigned !== "function") {
+      throw new Error("当前浏览器加载的 Blob SDK 不支持 OIDC 预签名上传，请刷新页面后重试。");
+    }
+
     const contentType = inferAudioType(file);
     const uploadFile = file.type
       ? file
@@ -65,7 +69,7 @@
           lastModified: file.lastModified || Date.now(),
         });
 
-    const blob = await upload(safeUploadName(uploadFile), uploadFile, {
+    const blob = await uploadPresigned(safeUploadName(uploadFile), uploadFile, {
       access: "private",
       handleUploadUrl: `${AI_API_BASE}/api/blob-upload`,
       contentType,
@@ -131,8 +135,14 @@
       let detail = err?.message || "AI 转写失败，请稍后重试。";
       if (err?.code === "OPENAI_API_KEY_MISSING") {
         detail = "AI 后端已经部署，但还没有配置 OpenAI API Key。";
-      } else if (err?.code === "BLOB_NOT_CONFIGURED") {
-        detail = "20MB 上传功能已经接好，但 Vercel Blob 还没有连接到后端项目。请先创建并连接 Blob 存储。";
+      } else if (
+        err?.code === "BLOB_NOT_CONFIGURED" ||
+        err?.code === "BLOB_OIDC_NOT_AVAILABLE" ||
+        err?.code === "BLOB_WEBHOOK_KEY_MISSING"
+      ) {
+        detail = "Blob 已连接，但当前部署还没有拿到完整的 OIDC 授权信息。请确认 Production 已重新部署后再试。";
+      } else if (/Failed to retrieve the client token/i.test(detail)) {
+        detail = "Blob 上传授权失败。当前页面已切换为 OIDC 预签名上传；请刷新页面后重试。";
       }
 
       setVoiceStatus(detail, "error-state");
